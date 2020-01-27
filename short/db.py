@@ -138,7 +138,14 @@ class DynamoTable(object):
 
         if item["short"] is None:
             item["short"] = self.generate_short_key()
-            response = self.table.put_item(Item=item)
+            # item["short"] = random_string()
+            response = self.table.put_item(
+                Item=item,
+                # This should raise an error when duplicate entries are made,
+                # but is does not when I use it in this context. When I try it
+                # on the command line it works... No idea...
+                # ConditionExpression=Attr("short").not_exists(),
+            )
             if response["ResponseMetadata"]["HTTPStatusCode"] != 200:
                 raise RuntimeError
         return item
