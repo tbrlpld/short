@@ -58,11 +58,30 @@ class TestSaveMethod(object):
 
     def test_trailing_newlines_are_stipped_from_long_url(
         self,
-        table_connection
+        table_connection,
     ):
         response = table_connection.save_long_url("http://example.com\n")
 
         assert response["long_url"] == "http://example.com"
+
+    def test_mocking_the_random_short_to_a_fixed_value(
+        self,
+        table_connection,
+        monkeypatch,
+    ):
+        # Define the replacement function
+        def mockreturn(*args, **kwargs):
+            return "m0ck"
+        # Replace the function
+        from short import db
+        monkeypatch.setattr(db, "random_string", mockreturn)
+
+        response = table_connection.save_long_url("http://example.com")
+
+        assert response["short"] == "m0ck"
+        assert response["long_url"] == "http://example.com"
+
+
 
 
 class TestGetShortOfLongMethod(object):
