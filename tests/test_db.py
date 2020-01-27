@@ -56,16 +56,6 @@ def table_connection():
 
 
 @pytest.fixture
-def mock_random_string(monkeypatch):
-    # Define the replacement function
-    def mockreturn(*args, **kwargs):
-        return "m0ck"
-    # Replace the function
-    from short import db
-    monkeypatch.setattr(db, "random_string", mockreturn)
-
-
-@pytest.fixture
 def example_entry(table_connection):
     return table_connection.save_long_url("http://example.com")
 
@@ -118,34 +108,6 @@ class TestSaveMethod(object):
 
         assert response["long_url"] == "http://example.com"
 
-    def test_mocking_the_random_short_to_a_fixed_value(
-        self,
-        table_connection,
-        mock_random_string,
-    ):
-        """Test that mocking of random short works."""
-        response = table_connection.save_long_url("http://example.com")
-
-        assert response["short"] == "m0ck"
-        assert response["long_url"] == "http://example.com"
-
-    def test_mocking_random_string_2_of_3_times(
-        self,
-        table_connection,
-        monkeypatch,
-    ):
-        from short import db
-        random_mocker = MockLimit("m0ck", 2, db.random_string)
-        monkeypatch.setattr(db, "random_string", random_mocker.mocking_func)
-
-        response1 = table_connection.save_long_url("http://example1.com")
-        response2 = table_connection.save_long_url("http://example2.com")
-        response3 = table_connection.save_long_url("http://example3.com")
-
-        assert response1["short"] == "m0ck"
-        assert response2["short"] == "m0ck"
-        assert response3["short"] != "m0ck"
-
 
 class TestGetShortOfLongMethod(object):
     def test_finds_short_for_given_long_url(
@@ -167,3 +129,49 @@ class TestGetLongFromShortMethod(object):
         long_url = table_connection.get_long_from_short(example_entry["short"])
 
         assert long_url == example_entry["long_url"]
+
+
+class TestRandomString(object):
+    def test_mocking_random_string_2_of_3_times(
+        self,
+        monkeypatch,
+    ):
+        """
+        Test to show how `random_string` function can be mocked.
+
+        In the given configuration, the `random_string` function is mocked
+        twice and then the original functionality is restored. This is
+        handled through the MockLimit class without the need to a context
+        manager.
+
+        This can be useful to test generation of duplicate short keys.
+        The first execution can be used to create the first entry in the
+        database. Then a second entry in the database for a (different) long
+        URL is supposed to be made. But by "accident" (in this case design),
+        the second generated "random string" is the same as the first. The
+        handling of such a case will likely involve additional execution of the
+        `random_string` function until a short key is found that is not
+        contained in the database yet.
+
+        Because we can expect the `random_string` function to eventually
+        generate a key that is not in the database, we need to fallback to its
+        original functionality.
+
+        The mocking of that kind is demonstrated below. The limit of 2
+        executions that get the same response is arbitrary. Since the idea of
+        this test is to simply show the possibility of the mocking for limited
+        number of executions, it could be set to any limit, but 2 out of 3
+        should be fine to get the idea.
+
+        """
+        from short import db
+        random_mocker = MockLimit("m0ck", 2, db.random_string)
+        monkeypatch.setattr(db, "random_string", random_mocker.mocking_func)
+
+        short1 = db.random_string()
+        short2 = db.random_string()
+        short3 = db.random_string()
+
+        assert short1 == "m0ck"
+        assert short2 == "m0ck"
+        assert short3 != "m0ck"
