@@ -133,10 +133,11 @@ class DynamoTable(object):
         item = {
             "long_url": long_url.strip(),
         }
+        # Check if long already in db
         item["short"] = self.get_short_of_long(long_url)
 
         if item["short"] is None:
-            item["short"] = random_string()
+            item["short"] = self.generate_short_key()
             response = self.table.put_item(Item=item)
             if response["ResponseMetadata"]["HTTPStatusCode"] != 200:
                 raise RuntimeError
@@ -181,6 +182,21 @@ class DynamoTable(object):
             return None
         item = response["Items"][0]
         return item.get("long_url")
+
+    def generate_short_key(self) -> str:
+        """
+        Generate short key that is not in db.
+
+        Returns:
+            str: Short key that is not in the db yet.
+
+        """
+        short = random_string()
+        while self.get_long_from_short(short) != None:
+            # If the short key is in the DB, `get_long_from_short` will return
+            # a not None value.
+            short = random_string()
+        return short
 
 
 def random_string(length: int = 4) -> str:
