@@ -12,6 +12,16 @@ def table_connection():
 
 
 @pytest.fixture
+def mock_random_string(monkeypatch):
+    # Define the replacement function
+    def mockreturn(*args, **kwargs):
+        return "m0ck"
+    # Replace the function
+    from short import db
+    monkeypatch.setattr(db, "random_string", mockreturn)
+
+
+@pytest.fixture
 def example_entry(table_connection):
     return table_connection.save_long_url("http://example.com")
 
@@ -67,15 +77,8 @@ class TestSaveMethod(object):
     def test_mocking_the_random_short_to_a_fixed_value(
         self,
         table_connection,
-        monkeypatch,
+        mock_random_string,
     ):
-        # Define the replacement function
-        def mockreturn(*args, **kwargs):
-            return "m0ck"
-        # Replace the function
-        from short import db
-        monkeypatch.setattr(db, "random_string", mockreturn)
-
         response = table_connection.save_long_url("http://example.com")
 
         assert response["short"] == "m0ck"
