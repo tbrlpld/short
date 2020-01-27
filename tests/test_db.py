@@ -1,6 +1,50 @@
 import pytest
 
 
+class MockLimit(object):
+    """
+    Class to provide mocked returns for a max number of times.
+
+    During instantiation, define the `mockreturn`. This is the value
+    that will be initially returned by `mocking_func`.
+    On every of these returns, the `mock_count` of the instance is
+    increased. If the `mock_count` reaches the `mock_count_max` limit,
+    then `mocking_func` will not return `mockreturn` anymore.
+    Rather, the return value of `mocking_func` is defined by the return
+    value of the `fallback_func`.
+
+    Say you wish to mock the return of function `foo.bar` to be `baz`
+    for 3 times. After you received the mock value 3 times, you wish
+    to actually get the original functionality of `foo` back, then you
+    set the `fallback_func` to be `foo.bar`.
+
+    To get the above example, you would set it up like so:
+    ```
+    import foo
+    foo_bar_mocker = MockLimit("baz", 3, foo.bar)
+    monkeypatch.setattr(foo, "bar", foo_bar_mocker.mocking_func)
+    ```
+
+    """
+
+    def __init__(self, mockreturn, mock_count_max, fallback_func):
+        self.mock_count_max = mock_count_max
+        self.mock_count = 0
+        self.mockreturn = mockreturn
+        self.fallback_func = fallback_func
+
+    def mocking_func(self, *args, **kwargs):
+        """
+        Return mockreturn or fallback_func return depending on count.
+
+        """
+
+        if self.mock_count < self.mock_count_max:
+            self.mock_count += 1
+            return self.mockreturn
+        return self.fallback_func()
+
+
 @pytest.fixture
 def table_connection():
     from short.db import DynamoTable
@@ -79,12 +123,28 @@ class TestSaveMethod(object):
         table_connection,
         mock_random_string,
     ):
+        """Test that mocking of random short works."""
         response = table_connection.save_long_url("http://example.com")
 
         assert response["short"] == "m0ck"
         assert response["long_url"] == "http://example.com"
 
+    def test_mocking_random_string_2_of_3_times(
+        self,
+        table_connection,
+        monkeypatch,
+    ):
+        from short import db
+        random_mocker = MockLimit("m0ck", 2, db.random_string)
+        monkeypatch.setattr(db, "random_string", random_mocker.mocking_func)
 
+        response1 = table_connection.save_long_url("http://example1.com")
+        response2 = table_connection.save_long_url("http://example2.com")
+        response3 = table_connection.save_long_url("http://example3.com")
+
+        assert response1["short"] == "m0ck"
+        assert response2["short"] == "m0ck"
+        assert response3["short"] != "m0ck"
 
 
 class TestGetShortOfLongMethod(object):
