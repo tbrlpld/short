@@ -108,6 +108,27 @@ class TestSaveMethod(object):
 
         assert response["long_url"] == "http://example.com"
 
+    def test_handing_when_random_key_generates_short_key_already_in_db(
+        self,
+        table_connection,
+        monkeypatch,
+    ):
+        # Create initial entry
+        first_response = table_connection.save_long_url("http://example1.com")
+        first_short = first_response["short"]
+        # Mock `random_string` to produce the same value again. It could
+        # actually be set to produce the same "random value" more than once.
+        # We just need to define some limit to prevent the test getting stuck
+        # because in a never ending loop. Also, we can assume that the
+        # `random_string` function will eventually generate a key that is not
+        # already in the database.
+        from short import db
+        random_mocker = MockLimit(first_short, 1, db.random_string)
+        monkeypatch.setattr(db, "random_string", random_mocker.mocking_func)
+
+        second_response = table_connection.save_long_url("http://example2.com")
+        assert second_response["short"] != first_short
+
 
 class TestGetShortOfLongMethod(object):
     def test_finds_short_for_given_long_url(
