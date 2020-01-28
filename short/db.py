@@ -24,7 +24,6 @@ class DynamoTable(object):
         self,
         table_name: str = "urls",
         local: bool = False,
-        with_range_key: bool = False,
     ):
         """
         Initialize a connected DynamoDB table.
@@ -36,11 +35,6 @@ class DynamoTable(object):
             local (bool): Whether to use a local instance of DynamoDB. If True,
                 the DynamoDB should be reachable at "http://localhost:8000".
                 Default is False.
-            with_range_key (bool): Wether to use `long_url` as the range key
-                of the schema. This was the original definition but had to
-                be removed to prevent duplicate entries on a database level.
-                This argument is mainly for the purpose of migrating and can
-                be removed after the migration is completed.
 
         """
         self.table_name = table_name
@@ -69,20 +63,6 @@ class DynamoTable(object):
                 "AttributeType": "S",
             },
         ]
-
-        if with_range_key:
-            self.KEY_SCHEMA.append(
-                {
-                    "AttributeName": "long_url",
-                    "KeyType": "RANGE",
-                },
-            )
-            self.ATTRIBUTES_DEFINITIONS.append(
-                {
-                    "AttributeName": "long_url",
-                    "AttributeType": "S",
-                },
-            )
 
         self.PROVISIONED_TRHOUGHPUT = {
             "ReadCapacityUnits": 10,
@@ -162,7 +142,7 @@ class DynamoTable(object):
                 # on the command line it works... No idea...
                 ConditionExpression=Attr("short").not_exists(),
             )
-            breakpoint()
+            # breakpoint()
             if response["ResponseMetadata"]["HTTPStatusCode"] != 200:
                 raise RuntimeError
         return item
