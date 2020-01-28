@@ -133,16 +133,21 @@ class DynamoTable(object):
         item["short"] = self.get_short_of_long(long_url)
 
         if item["short"] is None:
-            # item["short"] = self.generate_short_key()
-            item["short"] = random_string()
-            response = self.table.put_item(
-                Item=item,
-                # This should raise an error when duplicate entries are made,
-                # but is does not when I use it in this context. When I try it
-                # on the command line it works... No idea...
-                ConditionExpression=Attr("short").not_exists(),
-            )
-            # breakpoint()
+            put_succsess = False
+            while not put_succsess:
+                item["short"] = random_string()
+                try:
+                    response = self.table.put_item(
+                        Item=item,
+                        ConditionExpression=Attr("short").not_exists(),
+                    )
+                except ClientError as e:
+                    if "ConditionalCheckFailedException" not in e.args[0]:
+                        raise e
+                    pass
+                else:
+                    put_succsess = True
+
             if response["ResponseMetadata"]["HTTPStatusCode"] != 200:
                 raise RuntimeError
         return item
@@ -186,21 +191,6 @@ class DynamoTable(object):
             return None
         item = response["Items"][0]
         return item.get("long_url")
-
-    def generate_short_key(self) -> str:
-        """
-        Generate short key that is not in db.
-
-        Returns:
-            str: Short key that is not in the db yet.
-
-        """
-        short = random_string()
-        while self.get_long_from_short(short) != None:
-            # If the short key is in the DB, `get_long_from_short` will return
-            # a not None value.
-            short = random_string()
-        return short
 
 
 def random_string(length: int = 4) -> str:
