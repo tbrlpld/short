@@ -20,7 +20,12 @@ class DynamoTable(object):
 
     """
 
-    def __init__(self, table_name: str = "urls", local: bool = False):
+    def __init__(
+        self,
+        table_name: str = "urls",
+        local: bool = False,
+        with_range_key: bool = False,
+    ):
         """
         Initialize a connected DynamoDB table.
 
@@ -31,6 +36,11 @@ class DynamoTable(object):
             local (bool): Whether to use a local instance of DynamoDB. If True,
                 the DynamoDB should be reachable at "http://localhost:8000".
                 Default is False.
+            with_range_key (bool): Wether to use `long_url` as the range key
+                of the schema. This was the original definition but had to
+                be removed to prevent duplicate entries on a database level.
+                This argument is mainly for the purpose of migrating and can
+                be removed after the migration is completed.
 
         """
         self.table_name = table_name
@@ -51,10 +61,6 @@ class DynamoTable(object):
                 "AttributeName": "short",
                 "KeyType": "HASH",
             },
-            {
-                "AttributeName": "long_url",
-                "KeyType": "RANGE",
-            },
         ]
 
         self.ATTRIBUTES_DEFINITIONS = [
@@ -62,15 +68,25 @@ class DynamoTable(object):
                 "AttributeName": "short",
                 "AttributeType": "S",
             },
-            {
-                "AttributeName": "long_url",
-                "AttributeType": "S",
-            },
         ]
+
+        if with_range_key:
+            self.KEY_SCHEMA.append(
+                {
+                    "AttributeName": "long_url",
+                    "KeyType": "RANGE",
+                },
+            )
+            self.ATTRIBUTES_DEFINITIONS.append(
+                {
+                    "AttributeName": "long_url",
+                    "AttributeType": "S",
+                },
+            )
 
         self.PROVISIONED_TRHOUGHPUT = {
             "ReadCapacityUnits": 10,
-            "WriteCapacityUnits": 10,
+            "WriteCapacityUnits": 1,
         }
 
         if not self.table:
@@ -137,15 +153,16 @@ class DynamoTable(object):
         item["short"] = self.get_short_of_long(long_url)
 
         if item["short"] is None:
-            item["short"] = self.generate_short_key()
-            # item["short"] = random_string()
+            # item["short"] = self.generate_short_key()
+            item["short"] = random_string()
             response = self.table.put_item(
                 Item=item,
                 # This should raise an error when duplicate entries are made,
                 # but is does not when I use it in this context. When I try it
                 # on the command line it works... No idea...
-                # ConditionExpression=Attr("short").not_exists(),
+                ConditionExpression=Attr("short").not_exists(),
             )
+            breakpoint()
             if response["ResponseMetadata"]["HTTPStatusCode"] != 200:
                 raise RuntimeError
         return item
