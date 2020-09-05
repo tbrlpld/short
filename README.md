@@ -2,9 +2,6 @@
 
 URL shortener app, build with Flask, deployed with Zappa to AWS Lambda and Dynamo DB.
 
-A simple Flask app creates the endpoints to interact with.
-Data is stored in a AWS DynamoDB.
-
 
 ## Testing and Development
 
