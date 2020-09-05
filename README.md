@@ -1,9 +1,9 @@
-# URL Shortener
+# Shorten That URL
 
-Simple URL shortener do be hosted on AWS Lambda via Zappa. 
+URL shortener app, build with Flask, deployed with Zappa to AWS Lambda and Dynamo DB.
 
-A simple Flask app creates the endpoints to interact with. 
-Data is stored in a AWS DynamoDB. 
+A simple Flask app creates the endpoints to interact with.
+Data is stored in a AWS DynamoDB.
 
 
 ## Testing and Development
@@ -35,7 +35,7 @@ docker run -p 8000:8000 amazon/dynamodb-local
 
 ### Running the Tests
 
-Run the tests simply with 
+Run the tests simply with
 ```shell
 pytest
 ```
@@ -52,7 +52,7 @@ Deploying..
 Your application is now live at: https://7k6anj0k99.execute-api.us-east-1.amazonaws.com/production
 ```
 
-For development deployment, use `dev` instead of `production`. 
+For development deployment, use `dev` instead of `production`.
 
 To an updated version of the Lambda function use:
 ```shell
