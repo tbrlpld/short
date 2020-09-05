@@ -9,12 +9,8 @@ Data is stored in a AWS DynamoDB.
 ## Testing and Development
 
 ### Setup
-Install the package in editable mode:
-```shell
-python -m pip install -e .
-```
 
-Install the development dependencies:
+Install the package (in editable mode) and the development dependencies:
 ```shell
 python -m pip install -e ".[develop]"
 ```
